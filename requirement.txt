@@ -1,0 +1,7 @@
+SQLAlchemy==1.4.23
+SQLAlchemy-Utils==0.37.8
+fastapi==0.68.1
+loguru==0.5.3
+uvicorn==0.15.0
+PyMySQL==1.0.2
+redis==3.5.3
