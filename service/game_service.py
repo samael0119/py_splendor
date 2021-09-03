@@ -13,6 +13,10 @@ def get_room_info(room_id):
     pass
 
 
+def set_room_info(room_id, values):
+    pass
+
+
 def start_game(room_id):
     pass
 
@@ -29,9 +33,8 @@ def game_init(card_summary_id, coin_summary_id):
 
 def roll_first_action_player(user_count: int):
     """
-    获取首位玩家id
+    获取首位玩家index
     :param user_count:
     :return:
     """
-    return choice(range(1, user_count + 1))
-
+    return choice(range(0, user_count))

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, TIMESTAMP, func, text, ForeignKey, TEXT
+from sqlalchemy import Column, String, Integer, TIMESTAMP, func, text, ForeignKey, TEXT, SMALLINT
 
 from utils.mysql_utils import Base
 
@@ -18,6 +18,9 @@ class Player(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id'))
+    seat_num = Column(Integer)
+    # 0 no, 1 yes
+    is_action = Column(SMALLINT)
     card = Column(TEXT)
     coin = Column(TEXT)
     source = Column(Integer)

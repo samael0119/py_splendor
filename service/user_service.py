@@ -1,3 +1,11 @@
+import threading
+import time
+
+from loguru import logger
+
+from model.user import Player
+
+
 def logon():
     pass
 
@@ -7,6 +15,14 @@ def login():
 
 
 def logout():
+    pass
+
+
+def get_player_info(player_id):
+    return Player()
+
+
+def set_player_info(player_id, values):
     pass
 
 
@@ -42,17 +58,32 @@ def finish_player_action():
     pass
 
 
-def get_player_card():
+def get_player_card(player_id):
     pass
 
 
-def get_player_coin():
+def get_player_coin(player_id):
     pass
 
 
-def get_player_source():
+def get_player_source(player_id):
     pass
 
 
-def player_win():
+def finish_log():
+    logger.info('行动超时，终止行动')
+
+
+def wait_player_action(room_id, player_id, time_out):
+    # 线程计时器
+    t = threading.Timer(time_out, finish_log)
+    t.start()
+    while True:
+        # 玩家执行跳过 或 行动超时
+        if not get_player_info(player_id).is_action or not t.is_alive():
+            break
+        time.sleep(1)
+
+
+def finish_action(player_id):
     pass
