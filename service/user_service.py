@@ -1,9 +1,13 @@
 import threading
 import time
-
+import json
 from loguru import logger
 
-from model.user import Player
+from model.game import RoomSummary, RoomUser
+from model.user import Player, User
+from service.game_service import get_room_info
+from utils.const_utils import ServiceCode, RoomConst, UserConst
+from utils.mysql_utils import MysqlConnector
 
 
 def logon():
@@ -18,31 +22,168 @@ def logout():
     pass
 
 
-def get_player_info(player_id):
-    return Player()
+def get_player_info_by_room_user_id(room_user_id):
+    with MysqlConnector().get_session() as s:
+        try:
+            item = s.query(Player).filter(Player.room_user_id == room_user_id).first()
+        except:
+            logger.exception(f'查询房间用户{room_user_id}对应的玩家信息失败')
+            return None
+
+    return item
+
+
+def get_player_info_by_room_user_id_list(room_user_id_list):
+    with MysqlConnector().get_session() as s:
+        try:
+            item = s.query(Player).filter(Player.room_user_id.in_(room_user_id_list)).all()
+        except:
+            logger.exception(f'查询房间用户{room_user_id_list}对应的玩家信息失败')
+            return []
+
+    return item
+
+
+def get_player_info_by_id(player_id):
+    with MysqlConnector().get_session() as s:
+        try:
+            item = s.query(Player).filter(Player.id == player_id).first()
+        except:
+            logger.exception(f'查询玩家{player_id}信息失败')
+            return None
+
+    return item
 
 
 def set_player_info(player_id, values):
-    pass
+    with MysqlConnector().get_session() as s:
+        try:
+            s.query(Player).filter(Player.id == player_id).update(values, synchronize_session='fetch')
+            s.commit()
+        except:
+            logger.exception(f'玩家{player_id}信息修改失败')
+            s.rollback()
+            return ServiceCode.SQL_ERROR
+
+    logger.info(f'玩家{player_id}信息修改成功')
+    return ServiceCode.SUCCESS
 
 
-def create_room(user_id):
-    pass
+def create_room(user_id, max_player=4, max_action_time=30, win_source=10, card_summary_id=1, coin_summary_id=1):
+    new_room = RoomSummary(owner=user_id,
+                           max_player=max_player,
+                           player_list=f'[{user_id}]',
+                           max_action_time=max_action_time,
+                           win_source=win_source,
+                           card_summary_id=card_summary_id,
+                           coin_summary_id=coin_summary_id,
+                           room_status=RoomConst.STATUS_WAITING)
+    with MysqlConnector().get_session() as s:
+        try:
+            s.add(new_room)
+            s.commit()
+        except:
+            logger.exception(f'{user_id}创建房间失败')
+            s.rollback()
+            return ServiceCode.SQL_ERROR
+        logger.info(f'{user_id}创建房间{new_room.id}成功')
+
+        # 创建者无法加入自己的房间则删除该房间
+        if ServiceCode.SUCCESS != join_room(user_id=user_id, room_id=new_room.id, user_type='player'):
+            s.query(RoomSummary).filter(RoomSummary.id == new_room.id).delete(synchronize_session='fetch')
+            s.commit()
+            return ServiceCode.SYS_ERROR
+
+    return ServiceCode.SUCCESS
 
 
-def join_room(user_id, room_id):
-    pass
+def check_room_can_join(room_id, user_type='player'):
+    with MysqlConnector().get_session() as s:
+        try:
+            item = s.query(RoomSummary).filter(RoomSummary.id == room_id).first()
+        except:
+            logger.exception(f'查询房间{room_id}信息失败')
+            return False
+    if item and item.room_status == 'Waiting':
+        if user_type == 'player' and len(
+                json.loads(item.player_list if item.player_list is not None else '[]')) < item.max_player:
+            return True
+        elif user_type == 'observer' and item.observer_list < RoomConst.MAX_OBSERVER_COUNT:
+            return True
+    return False
 
 
-def set_room_info(room_id, room):
-    pass
+def check_user_can_join(user_id):
+    with MysqlConnector().get_session() as s:
+        try:
+            item = s.query(User).filter(User.id == user_id).first()
+        except:
+            logger.exception(f'查询用户{user_id}信息失败')
+            return False
+    if item and item.status == UserConst.STATUS_FREE:
+        return True
+    return False
 
 
-def join_player_position():
-    pass
+def get_room_seat_num(room_id):
+    result = []
+    item = get_room_info(room_id)
+    if not item:
+        return result
+    with MysqlConnector().get_session() as s:
+        max_seat_num = item.max_player
+        exist_seat_num = [n for n in s.query(RoomUser.seat_num).filter(RoomUser.room_id == room_id).all() if n[0]]
+        result.extend(set(range(1, max_seat_num + 1)).difference(set(exist_seat_num)))
+
+    return sorted(result)
 
 
-def join_observer_position():
+def join_room(user_id, room_id, user_type='player'):
+    if not check_user_can_join(user_id=user_id):
+        return ServiceCode.SYS_ERROR
+
+    if not check_room_can_join(room_id=room_id, user_type=user_type):
+        return ServiceCode.SYS_ERROR
+
+    # 获取可坐下的座位号，默认坐在最小的号码
+    seat_num_list = get_room_seat_num(room_id=room_id)
+
+    new_room_user = RoomUser(user_id=user_id,
+                             room_id=room_id,
+                             user_type=user_type,
+                             seat_num=seat_num_list[0],
+                             )
+    with MysqlConnector().get_session() as s:
+        try:
+            s.add(new_room_user)
+            s.commit()
+        except:
+            logger.exception(f'{user_id}加入房间{room_id}失败')
+            s.rollback()
+            return ServiceCode.SQL_ERROR
+    logger.info(f'{user_id}加入房间{room_id}成功')
+    return ServiceCode.SUCCESS
+
+
+def player_sit_down(room_id, room_user_id, seat_num=None):
+    seat_num_list = get_room_seat_num(room_id)
+    with MysqlConnector().get_session() as s:
+        try:
+            new_seat_num = seat_num or seat_num_list[0]
+            s.query(RoomUser).filter(RoomUser.id == room_user_id).update({
+                'seat_num': new_seat_num
+            }, synchronize_session='fetch')
+            s.commit()
+        except:
+            logger.exception(f'{room_user_id}入座{room_id}的{new_seat_num}号座位失败')
+            s.rollback()
+            return ServiceCode.SQL_ERROR
+
+    logger.info(f'{room_user_id}入座{room_id}的{new_seat_num}号座位成功')
+    return ServiceCode.SUCCESS
+
+
+def set_room_info(room_id, values):
     pass
 
 
@@ -58,32 +199,26 @@ def finish_player_action():
     pass
 
 
-def get_player_card(player_id):
-    pass
-
-
-def get_player_coin(player_id):
-    pass
-
-
-def get_player_source(player_id):
-    pass
-
-
 def finish_log():
     logger.info('行动超时，终止行动')
 
 
-def wait_player_action(room_id, player_id, time_out):
+def wait_player_action(player_id, time_out):
     # 线程计时器
     t = threading.Timer(time_out, finish_log)
     t.start()
     while True:
         # 玩家执行跳过 或 行动超时
-        if not get_player_info(player_id).is_action or not t.is_alive():
+        if get_player_info_by_id(player_id).can_action != UserConst.ACTION_CAN or not t.is_alive():
             break
         time.sleep(1)
 
 
 def finish_action(player_id):
     pass
+
+
+if __name__ == '__main__':
+    # create_room(1)
+    # join_room(2,4)
+    player_sit_down(4, 3, 2)

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, TIMESTAMP, func, text, ForeignKey
+from sqlalchemy import Column, String, Integer, TIMESTAMP, func, text
 
 from utils.mysql_utils import Base
 
@@ -19,8 +19,9 @@ class CardDetail(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(100))
-    card_type_id = Column(Integer, ForeignKey('card_type.id'))
-    price = Column(String(100))
+    # ForeignKey('card_type.id')
+    card_type_id = Column(Integer)
+    price = Column(String(100), nullable=False)
     create_time = Column(TIMESTAMP, nullable=False, server_default=func.now())
     update_time = Column(TIMESTAMP, nullable=False,
                          server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
@@ -41,8 +42,10 @@ class CardRelate(Base):
     __tablename__ = 'card_relate'
 
     id = Column(Integer, primary_key=True)
-    coin_summary_id = Column(Integer, ForeignKey('card_summary.id'))
-    coin_detail_id = Column(Integer, ForeignKey('card_detail.id'))
+    # ForeignKey('card_summary.id')
+    card_summary_id = Column(Integer)
+    # ForeignKey('card_detail.id')
+    card_detail_id = Column(Integer)
     create_time = Column(TIMESTAMP, nullable=False, server_default=func.now())
     update_time = Column(TIMESTAMP, nullable=False,
                          server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))

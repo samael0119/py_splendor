@@ -21,11 +21,11 @@ class MysqlConnector:
 
     def get_session(self):
         if self._db_session is not None:
-            return self._db_session
+            return self._db_session()
 
         else:
             self._db_session = sessionmaker(bind=self._engine)
-            return self._db_session
+            return self._db_session()
 
     def get_base(self):
         return declarative_base(bind=self._engine)
