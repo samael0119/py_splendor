@@ -81,3 +81,19 @@ def list_card_summary(card_summary_id=None, name=None, describe=None, page_no=1,
 
     logger.info(f'获取卡包第{page_no}页，page_size: {page_size}')
     return total_page, page_data
+
+
+def get_card_detail_list_by_summary_id(card_summary_id):
+    card_detail_list = []
+    with MysqlConnector().get_session() as s:
+        try:
+            card_detail_list.extend(s.query(CardDetail).filter(CardDetail.id.in_(
+                s.query(CardRelate.card_detail_id).filter(CardRelate.card_summary_id == card_summary_id)
+            )).all())
+        except:
+            logger.exception(f'获取卡包{card_summary_id}信息失败')
+            return card_detail_list
+
+    logger.info(f'获取卡包{card_summary_id}信息成功')
+    return card_detail_list
+

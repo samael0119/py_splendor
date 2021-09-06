@@ -8,6 +8,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
+    icon = Column(Integer)
     mail = Column(String(200), nullable=False)
     password = Column(String(100), nullable=False)
     status = Column(SMALLINT, nullable=False)

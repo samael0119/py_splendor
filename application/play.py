@@ -5,10 +5,11 @@ from loguru import logger
 
 from model.game import RoomSummary
 from model.user import Player
-from service.game_service import game_init, roll_first_action_player, get_room_info, set_room_info, get_room_player_list
+from service.game_service import game_resource_init, roll_first_action_player, get_room_info, set_room_info, \
+    get_room_player_list
 from service.user_service import set_player_info, wait_player_action, get_player_info_by_room_user_id_list, \
     get_player_info_by_id
-from utils.const_utils import ServiceCode, RoomConst, UserConst
+from utils.const_utils import ServiceCode, RoomConst, UserConst, CardConst, CoinConst
 
 
 def play(room_id):
@@ -24,7 +25,7 @@ def play(room_id):
     # new thread
 
     # init game
-    card_data, coin_data = game_init(room.card_summary_id, room.coin_summary_id)
+    card_resource, coin_resource = game_resource_init(room.card_summary_id, room.coin_summary_id, room.max_player)
 
     # add to redis
     # redis_conn = RedisConnector().get_conn()
@@ -57,11 +58,16 @@ def play(room_id):
         # room.max_action_time
         wait_player_action(action_player_id, room.max_action_time)
 
-        set_player_info(action_player_id, {Player.can_action: UserConst.ACTION_NO})
+        set_player_info(action_player_id, {
+            Player.can_action: UserConst.ACTION_NO,
+            Player.card: json.dumps(card_detail),
+            Player.coin: json.dumps(coin_detail),
+            Player.source: source_detail,
+        })
 
         if source_detail >= room.win_source:
             end_index = first_index - 1 if first_index - 1 >= 0 else max_index
-            logger.info(f'有玩家达成胜利目标，最后一位可行动玩家为{end_index + 1}号座位')
+            logger.info(f'玩家达成胜利目标，最后一位可行动玩家为{end_index + 1}号座位')
 
         if end_index == action_index:
             logger.info('最后一位玩家行动完毕，游戏结束，开始结算')

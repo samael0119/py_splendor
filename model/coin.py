@@ -17,7 +17,8 @@ class CoinDetail(Base):
     __tablename__ = 'coin_detail'
 
     id = Column(Integer, primary_key=True)
-    color = Column(String(100))
+    coin_color = Column(String(100))
+    coin_icon_id = Column(Integer)
     create_time = Column(TIMESTAMP, nullable=False, server_default=func.now())
     update_time = Column(TIMESTAMP, nullable=False,
                          server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
