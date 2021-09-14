@@ -2,7 +2,7 @@ from loguru import logger
 
 from sqlalchemy import and_, or_
 
-from model.card import CardSummary, CardType, CardDetail, CardRelate
+from model.card import CardSummary, CardDetail, CardRelate
 from utils.const_utils import ServiceCode
 from utils.mysql_utils import MysqlConnector
 from utils.page_utils import PageHelper

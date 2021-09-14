@@ -1,6 +1,6 @@
 from loguru import logger
 
-from model import card, coin, user, game
+from model import card, coin, game, icon, user
 from utils.mysql_utils import Base
 
 

@@ -1,12 +1,11 @@
-from sqlalchemy import Column, String, Integer, TIMESTAMP, func, text, SMALLINT
+from sqlalchemy import Column, String, Integer, SMALLINT
 
-from utils.mysql_utils import Base
+from utils.mysql_utils import BaseModel, Base
 
 
-class RoomSummary(Base):
+class RoomSummary(BaseModel, Base):
     __tablename__ = 'room_summary'
 
-    id = Column(Integer, primary_key=True)
     # ForeignKey('user.id')
     owner = Column(Integer)
     password = Column(String(100))
@@ -19,16 +18,12 @@ class RoomSummary(Base):
     # ForeignKey('coin_summary.id')
     coin_summary_id = Column(Integer)
     # Waiting, Gaming, Closed
-    room_status = Column(String(20))
-    create_time = Column(TIMESTAMP, nullable=False, server_default=func.now())
-    update_time = Column(TIMESTAMP, nullable=False,
-                         server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+    room_status = Column(SMALLINT)
 
 
-class RoomUser(Base):
+class RoomUser(BaseModel, Base):
     __tablename__ = 'room_user'
 
-    id = Column(Integer, primary_key=True)
     # ForeignKey('room_summary.id')
     room_id = Column(Integer)
     # ForeignKey('user.id')
@@ -38,9 +33,7 @@ class RoomUser(Base):
     seat_num = Column(Integer)
     # null, ready, gaming, observing
     user_status = Column(String(20))
-    create_time = Column(TIMESTAMP, nullable=False, server_default=func.now())
-    update_time = Column(TIMESTAMP, nullable=False,
-                         server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+    user_client_token = Column(String(32))
 
 
 __all__ = ['RoomSummary', 'RoomUser']

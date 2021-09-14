@@ -84,6 +84,9 @@ def start_game(room_id):
 
 
 class CardResource(CardDetail):
+    """
+    牌堆， index=0代表牌堆顶， -1代表牌堆底
+    """
     card_resource = {
         CardConst.LEVEL_1_CARD: {
             CardConst.TYPE_DARK_CARD: deque(),
@@ -109,16 +112,43 @@ class CardResource(CardDetail):
 
         for k, v in self.card_resource.items():
             for _ in range(v[CardConst.TYPE_OPEN_CARD].maxlen):
-                v[CardConst.TYPE_OPEN_CARD].append(v[CardConst.TYPE_DARK_CARD].pop())
+                logger.info(f"发牌: {k}, 牌堆: {CardConst.TYPE_DARK_CARD}")
+                v[CardConst.TYPE_OPEN_CARD].extend(self.deal_card(k, CardConst.TYPE_DARK_CARD, 1))
 
-    def buy_card(self, card_level, card_type):
-        a = 1
+    def take_card(self, card_level, card_type, index):
+        card = None
+        if card_type == CardConst.TYPE_DARK_CARD:
+            card_list = self.deal_card(card_level, card_type, 1)
+            if card_list:
+                card = card_list[0]
+        else:
+            if self.card_resource[card_level][card_type][index]:
+                card = self.card_resource[card_level][card_type][index]
+                card_list = self.deal_card(card_level, card_type, 1)
+                if card_list:
+                    self.card_resource[card_level][card_type][index] = card_list[0]
 
-    def seizure_card(self, card_level, card_type):
-        a = 1
+        if card:
+            logger.info(f'拿卡成功，card: {card}')
+        else:
+            logger.info('拿卡失败')
+        return card
 
-    def deal_card(self, card_level):
-        a = 1
+    def deal_card(self, card_level, card_type, count):
+        card_list = []
+        for _ in range(count):
+            if len(self.card_resource[card_level][card_type]) >= 1:
+                card = self.card_resource[card_level][card_type].popleft()
+                if card_type == CardConst.TYPE_OPEN_CARD:
+                    logger.info(f'发牌, card: {card}')
+                elif card_type == CardConst.TYPE_DARK_CARD:
+                    logger.info(f'扣牌{count}张')
+                card_list.append(card)
+                logger.info(f'[{card_level}][{card_type}]剩余{len(self.card_resource[card_level][card_type])}张')
+            else:
+                logger.info(f'[{card_level}][{card_type}]没有牌了')
+                break
+        return card_list
 
 
 class CoinResource(CoinDetail):
@@ -152,6 +182,7 @@ class CoinResource(CoinDetail):
     def __init__(self, shuffled_coin_list, player_count):
         for c in shuffled_coin_list:
             count = CoinConst.ROLE_PLAYER_COIN_MAP[player_count]
+            # gold coin num?
             # if c.coin_color == CoinConst.COLOR_GOLD:
             #     count =
             self.coin_resource[c.coin_color].update({
@@ -160,7 +191,15 @@ class CoinResource(CoinDetail):
             })
 
     def tack_coin(self, coin_colors):
-        a = 1
+        coin_list = []
+        for color in coin_colors:
+            if self.coin_resource[color][CoinConst.COUNT] >= 0:
+                coin_list.append(self.coin_resource[color][CoinConst.OBJECT])
+                self.coin_resource[color][CoinConst.COUNT] -= 1
+                logger.info(f'{color}拿取成功，剩余{self.coin_resource[color][CoinConst.COUNT]}枚')
+            else:
+                logger.info(f'{color}硬币数量不足，拿币失败')
+        return coin_list
 
 
 def game_resource_init(card_summary_id, coin_summary_id, player_count):

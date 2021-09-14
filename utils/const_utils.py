@@ -87,3 +87,8 @@ class CoinConst:
         3: 5,
         4: 7
     }
+
+
+class SystemConst:
+    ACTION_START = "start"
+    ACTION_READY = "ready"

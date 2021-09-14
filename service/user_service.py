@@ -1,10 +1,13 @@
+import json
 import threading
 import time
-import json
+from uuid import uuid1
+
 from loguru import logger
 
 from model.game import RoomSummary, RoomUser
 from model.user import Player, User
+from router.v1 import websocket_router
 from service.game_service import get_room_info
 from utils.const_utils import ServiceCode, RoomConst, UserConst
 from utils.mysql_utils import MysqlConnector
@@ -108,7 +111,7 @@ def check_room_can_join(room_id, user_type='player'):
         if user_type == 'player' and len(
                 json.loads(item.player_list if item.player_list is not None else '[]')) < item.max_player:
             return True
-        elif user_type == 'observer' and item.observer_list < RoomConst.MAX_OBSERVER_COUNT:
+        elif user_type == 'observer' and item.observer_list < RoomConst.OBSERVER_MAX_COUNT:
             return True
     return False
 
@@ -121,6 +124,44 @@ def check_user_can_join(user_id):
             logger.exception(f'查询用户{user_id}信息失败')
             return False
     if item and item.status == UserConst.STATUS_FREE:
+        return True
+    return False
+
+
+def check_room_token_can_join(room_id, client_id):
+    with MysqlConnector().get_session() as s:
+        try:
+            items = s.query(RoomUser).filter(RoomUser.room_id == room_id).all()
+        except:
+            logger.exception(f'查询房间{room_id}信息失败')
+            return None
+        if not room_id:
+            logger.error(f'房间{room_id}不存在')
+            return None
+        if client_id:
+            for item in items:
+                if client_id == item.user_client_token:
+                    user = s.query(User).filter(User.id == item.user_id).first()
+                    room = s.query(RoomSummary).filter(RoomSummary.id == item.room_id).first()
+                    if any([not n for n in [user, room]]):
+                        return None
+                    if room.room_status == RoomConst.STATUS_CLOSED:
+                        return None
+
+                    result = {}
+                    result.update({
+                        "user_id": user.id,
+                        "user_name": user.name,
+                        "room_user_id": item.id,
+                        "user_type": item.user_type,
+                        "room_owner": room.owner == user.id,
+                    })
+                    return result
+    return None
+
+
+def check_user_online(room_id, user_client_token):
+    if user_client_token in websocket_router.manager.active_connections[room_id]:
         return True
     return False
 
@@ -152,6 +193,7 @@ def join_room(user_id, room_id, user_type='player'):
                              room_id=room_id,
                              user_type=user_type,
                              seat_num=seat_num_list[0],
+                             user_client_token=uuid1().hex
                              )
     with MysqlConnector().get_session() as s:
         try:

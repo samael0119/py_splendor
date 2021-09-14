@@ -1,8 +1,9 @@
 import os
 
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy import create_engine, MetaData, Column, TIMESTAMP, func, text, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+
 from sqlalchemy_utils.functions import database_exists, create_database
 
 
@@ -39,3 +40,11 @@ class MysqlConnector:
 
 Base = MysqlConnector().get_base()
 metadata = MysqlConnector().get_metadata()
+
+
+class BaseModel:
+
+    id = Column(Integer, primary_key=True)
+    create_time = Column(TIMESTAMP, nullable=False, server_default=func.now())
+    update_time = Column(TIMESTAMP, nullable=False,
+                         server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
