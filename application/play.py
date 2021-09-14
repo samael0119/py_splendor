@@ -1,3 +1,4 @@
+import asyncio
 import json
 import time
 
@@ -5,10 +6,11 @@ from loguru import logger
 
 from model.game import RoomSummary
 from model.user import Player
+from router.v1 import websocket_router
 from service.game_service import game_resource_init, roll_first_action_player, get_room_info, set_room_info, \
     get_room_player_list
 from service.user_service import set_player_info, wait_player_action, get_player_info_by_room_user_id_list, \
-    get_player_info_by_id, check_user_online
+    get_player_info_by_id
 from utils.const_utils import ServiceCode, RoomConst, UserConst, CardConst, CoinConst
 
 
@@ -95,5 +97,11 @@ async def play(room_id):
     pass
 
 
+def check_user_online(room_id, user_client_token):
+    if user_client_token in websocket_router.manager.active_connections[room_id]:
+        return True
+    return False
+
+
 if __name__ == '__main__':
-    play(4)
+    asyncio.run(play(4))

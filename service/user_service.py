@@ -7,7 +7,6 @@ from loguru import logger
 
 from model.game import RoomSummary, RoomUser
 from model.user import Player, User
-from router.v1 import websocket_router
 from service.game_service import get_room_info
 from utils.const_utils import ServiceCode, RoomConst, UserConst
 from utils.mysql_utils import MysqlConnector
@@ -158,12 +157,6 @@ def check_room_token_can_join(room_id, client_id):
                     })
                     return result
     return None
-
-
-def check_user_online(room_id, user_client_token):
-    if user_client_token in websocket_router.manager.active_connections[room_id]:
-        return True
-    return False
 
 
 def get_room_seat_num(room_id):
