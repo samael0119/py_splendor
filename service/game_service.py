@@ -116,6 +116,7 @@ class CardResource(CardDetail):
                 v[CardConst.TYPE_OPEN_CARD].extend(self.deal_card(k, CardConst.TYPE_DARK_CARD, 1))
 
     def take_card(self, card_level, card_type, index):
+        """拿牌，需要支付卡片相应费用"""
         card = None
         if card_type == CardConst.TYPE_DARK_CARD:
             card_list = self.deal_card(card_level, card_type, 1)
@@ -135,6 +136,7 @@ class CardResource(CardDetail):
         return card
 
     def deal_card(self, card_level, card_type, count):
+        """发牌，从卡池顶发指定张数的牌，系统方法玩家无法使用"""
         card_list = []
         for _ in range(count):
             if len(self.card_resource[card_level][card_type]) >= 1:
@@ -191,6 +193,7 @@ class CoinResource(CoinDetail):
             })
 
     def tack_coin(self, coin_colors):
+        """获取硬币"""
         coin_list = []
         for color in coin_colors:
             if self.coin_resource[color][CoinConst.COUNT] >= 0:

@@ -19,4 +19,4 @@ async def test():
 
 
 if __name__ == '__main__':
-    run("app:app", host='0.0.0.0', port=9999, reload=True)
+    run("app:app", host='0.0.0.0', port=9999, reload=True, workers=4)

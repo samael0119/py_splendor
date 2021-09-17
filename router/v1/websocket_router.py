@@ -6,11 +6,16 @@ from fastapi import WebSocket, WebSocketDisconnect, FastAPI, Header
 from fastapi.responses import JSONResponse
 from loguru import logger
 
-from application.play import play
+from application.play import RoomPlay
+from service.game_service import CardResource, CoinResource
 from service.user_service import check_room_token_can_join
-from utils.const_utils import SystemConst
+from utils.const_utils import SystemConst, RoomConst
 
 socket_router = FastAPI()
+room_pool = {}
+instruct_map = {d: getattr(c, d).__doc__ for c in [CardResource, CoinResource]
+                for d in dir(c)
+                if not d.startswith('_') and callable(getattr(c, d))}
 
 
 class ConnectionManager:
@@ -38,9 +43,10 @@ class ConnectionManager:
         })
         if 'client_id' in message:
             client_id = message.pop('client_id')
-            message.update({
-                'user_name': self.client_user_map[client_id]['user_name']
-            })
+            if client_id in self.client_user_map:
+                message.update({
+                    'user_name': self.client_user_map[client_id]['user_name']
+                })
         for connection in self.active_connections[room_id].values():
             await connection.send_json(message)
             logger.info(message)
@@ -67,11 +73,28 @@ async def websocket_endpoint(websocket: WebSocket, room_id: int, client_id: str 
     try:
         while True:
             data = await websocket.receive_json()
-            # await manager.send_personal_message(f"You wrote: {data}", websocket)
-            if 'say' in data:
-                await manager.broadcast({'client_id': client_id, 'say': data['say']}, room_id)
-            if 'system' in data and data['system'] == SystemConst.ACTION_START and user['room_owner']:
-                await play(room_id)
+            if 'chat' in data:
+                if data.get('say'):
+                    await manager.broadcast({'client_id': client_id, 'say': data['say']}, room_id)
+            if 'system' in data:
+                if data.get('instruct') == SystemConst.ACTION_START and user['room_owner']:
+                    if room_id not in room_pool:
+                        rp = RoomPlay(room_id, manager.broadcast)
+                        room_pool.update({room_id: rp})
+                        await room_pool[room_id].runtime_process()
+                    elif room_pool[room_id].status == RoomConst.STATUS_WAITING:
+                        room_pool[room_id].status = RoomConst.STATUS_GAMING
+                        for i in range(1, 6):
+                            await manager.broadcast({'message': f'房间{room_id}开始游戏， 倒计时{i}'}, websocket)
+                    else:
+                        await manager.send_personal_message({'message': '不能重复开始游戏！！！'}, websocket)
+
+                if data.get('help'):
+                    await manager.send_personal_message(instruct_map, websocket)
+            if 'game' in data:
+                # 将玩家str指令转换为具体游戏逻辑, 如: {"instruct": "take_coin"}
+                pass
+
     except WebSocketDisconnect:
         manager.disconnect(room_id, client_id)
         await manager.broadcast({'client_id': client_id, 'system': 'disconnect'}, room_id)
