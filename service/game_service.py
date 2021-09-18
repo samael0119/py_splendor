@@ -75,7 +75,7 @@ def set_room_info(room_id, values):
             logger.exception(f'修改房间{room_id}信息失败')
             s.rollback()
             return ServiceCode.SQL_ERROR
-    logger.info(f'修改房间{room_id}信息成功')
+    logger.debug(f'修改房间{room_id}信息成功')
     return ServiceCode.SUCCESS
 
 
@@ -112,7 +112,7 @@ class CardResource(CardDetail):
 
         for k, v in self.card_resource.items():
             for _ in range(v[CardConst.TYPE_OPEN_CARD].maxlen):
-                logger.info(f"发牌: {k}, 牌堆: {CardConst.TYPE_DARK_CARD}")
+                logger.debug(f"发牌: {k}, 牌堆: {CardConst.TYPE_DARK_CARD}")
                 v[CardConst.TYPE_OPEN_CARD].extend(self.deal_card(k, CardConst.TYPE_DARK_CARD, 1))
 
     def take_card(self, card_level, card_type, index):
@@ -130,9 +130,9 @@ class CardResource(CardDetail):
                     self.card_resource[card_level][card_type][index] = card_list[0]
 
         if card:
-            logger.info(f'拿卡成功，card: {card}')
+            logger.debug(f'拿卡成功，card: {card}')
         else:
-            logger.info('拿卡失败')
+            logger.debug('拿卡失败')
         return card
 
     def deal_card(self, card_level, card_type, count):
@@ -142,13 +142,13 @@ class CardResource(CardDetail):
             if len(self.card_resource[card_level][card_type]) >= 1:
                 card = self.card_resource[card_level][card_type].popleft()
                 if card_type == CardConst.TYPE_OPEN_CARD:
-                    logger.info(f'发牌, card: {card}')
+                    logger.debug(f'发牌, card: {card}')
                 elif card_type == CardConst.TYPE_DARK_CARD:
-                    logger.info(f'扣牌{count}张')
+                    logger.debug(f'扣牌{count}张')
                 card_list.append(card)
-                logger.info(f'[{card_level}][{card_type}]剩余{len(self.card_resource[card_level][card_type])}张')
+                logger.debug(f'[{card_level}][{card_type}]剩余{len(self.card_resource[card_level][card_type])}张')
             else:
-                logger.info(f'[{card_level}][{card_type}]没有牌了')
+                logger.debug(f'[{card_level}][{card_type}]没有牌了')
                 break
         return card_list
 
@@ -199,9 +199,9 @@ class CoinResource(CoinDetail):
             if self.coin_resource[color][CoinConst.COUNT] >= 0:
                 coin_list.append(self.coin_resource[color][CoinConst.OBJECT])
                 self.coin_resource[color][CoinConst.COUNT] -= 1
-                logger.info(f'{color}拿取成功，剩余{self.coin_resource[color][CoinConst.COUNT]}枚')
+                logger.debug(f'{color}拿取成功，剩余{self.coin_resource[color][CoinConst.COUNT]}枚')
             else:
-                logger.info(f'{color}硬币数量不足，拿币失败')
+                logger.debug(f'{color}硬币数量不足，拿币失败')
         return coin_list
 
 

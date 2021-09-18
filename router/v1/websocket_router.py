@@ -1,5 +1,6 @@
-import json
+import asyncio
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, DefaultDict, Any
 
 from fastapi import WebSocket, WebSocketDisconnect, FastAPI, Header
@@ -16,6 +17,7 @@ room_pool = {}
 instruct_map = {d: getattr(c, d).__doc__ for c in [CardResource, CoinResource]
                 for d in dir(c)
                 if not d.startswith('_') and callable(getattr(c, d))}
+process_pool = ThreadPoolExecutor(max_workers=4)
 
 
 class ConnectionManager:
@@ -49,7 +51,7 @@ class ConnectionManager:
                 })
         for connection in self.active_connections[room_id].values():
             await connection.send_json(message)
-            logger.info(message)
+            # logger.info(message)
 
 
 manager = ConnectionManager()
@@ -61,7 +63,8 @@ async def test():
 
 
 @socket_router.websocket("/conn/{room_id}")
-async def websocket_endpoint(websocket: WebSocket, room_id: int, client_id: str = Header(None, convert_underscores=False)):
+async def websocket_endpoint(websocket: WebSocket, room_id: int,
+                             client_id: str = Header(None, convert_underscores=False)):
     # check user_token
     user = check_room_token_can_join(room_id, client_id)
     if not user:
@@ -73,28 +76,32 @@ async def websocket_endpoint(websocket: WebSocket, room_id: int, client_id: str 
     try:
         while True:
             data = await websocket.receive_json()
-            if 'chat' in data:
+            if data.get('chat'):
                 if data.get('say'):
                     await manager.broadcast({'client_id': client_id, 'say': data['say']}, room_id)
-            if 'system' in data:
+            if data.get('system'):
                 if data.get('instruct') == SystemConst.ACTION_START and user['room_owner']:
-                    if room_id not in room_pool:
+                    if room_pool.get(room_id) not in {RoomConst.STATUS_GAMING, RoomConst.STATUS_CLOSED}:
                         rp = RoomPlay(room_id, manager.broadcast)
                         room_pool.update({room_id: rp})
-                        await room_pool[room_id].runtime_process()
-                    elif room_pool[room_id].status == RoomConst.STATUS_WAITING:
                         room_pool[room_id].status = RoomConst.STATUS_GAMING
-                        for i in range(1, 6):
-                            await manager.broadcast({'message': f'房间{room_id}开始游戏， 倒计时{i}'}, websocket)
+                        for i in reversed(range(1, 6)):
+                            await manager.broadcast({'message': f'房间{room_id}开始游戏， 倒计时{i}'}, room_id)
+                            await asyncio.sleep(1)
+                        process_pool.submit(run, room_id)
                     else:
                         await manager.send_personal_message({'message': '不能重复开始游戏！！！'}, websocket)
 
                 if data.get('help'):
                     await manager.send_personal_message(instruct_map, websocket)
-            if 'game' in data:
-                # 将玩家str指令转换为具体游戏逻辑, 如: {"instruct": "take_coin"}
+            if data.get('game'):
+                # TODO 将玩家str指令转换为具体游戏逻辑, 如: {"instruct": "take_coin"}
                 pass
 
     except WebSocketDisconnect:
         manager.disconnect(room_id, client_id)
         await manager.broadcast({'client_id': client_id, 'system': 'disconnect'}, room_id)
+
+
+def run(room_id):
+    asyncio.run(room_pool[room_id].runtime_process())

@@ -1,6 +1,5 @@
 import asyncio
 import json
-import time
 
 from model.game import RoomSummary
 from model.user import Player
@@ -58,22 +57,20 @@ class RoomPlay:
         action_index = self._first_index
         end_index = None
         a = 5
-        # TODO 如何解决while循环block了await后的方法?
         while True:
             action_player_id = self._player_id_list[action_index]
             set_player_info(action_player_id, {Player.can_action: UserConst.ACTION_CAN})
-            # await self._broadcast({"message": f'{action_index + 1}号座位玩家开始行动'}, self._room_id)
+            await self._broadcast({"message": f'{action_index + 1}号座位玩家开始行动'}, self._room_id)
             # show player detail
             player_info = get_player_info_by_id(action_player_id)
             # check player online
             if not self.check_user_online(self._room_user_token[player_info.room_user_id]):
-                # await self._broadcast({"message": '用户离线...'}, self._room_id)
-                pass
+                await self._broadcast({"message": '用户离线...'}, self._room_id)
             card_detail = json.loads(player_info.card)
             coin_detail = json.loads(player_info.coin)
             source_detail = player_info.source
-            # await self._broadcast({"message": f'玩家信息： 卡片：{card_detail}， 硬币： {coin_detail}， 分数： {source_detail}'},
-            #                       self._room_id)
+            await self._broadcast({"message": f'玩家信息： 卡片：{card_detail}， 硬币： {coin_detail}， 分数： {source_detail}'},
+                                  self._room_id)
             # user action 盖卡，买卡，拿钱
             # room.max_action_time
             wait_player_action(action_player_id, self._room.max_action_time)
@@ -87,10 +84,10 @@ class RoomPlay:
 
             if source_detail >= self._room.win_source:
                 end_index = self._first_index - 1 if self._first_index - 1 >= 0 else max_index
-                # await self._broadcast({"message": f'玩家达成胜利目标，最后一位可行动玩家为{end_index + 1}号座位'}, self._room_id)
+                await self._broadcast({"message": f'玩家达成胜利目标，最后一位可行动玩家为{end_index + 1}号座位'}, self._room_id)
 
             if end_index == action_index:
-                # await self._broadcast({"message": '最后一位玩家行动完毕，游戏结束'}, self._room_id)
+                await self._broadcast({"message": '最后一位玩家行动完毕，游戏结束'}, self._room_id)
                 break
             # action finished
             action_index += 1
