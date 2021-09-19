@@ -13,16 +13,4 @@ class User(BaseModel, Base):
     status = Column(SMALLINT, nullable=False)
 
 
-class Player(BaseModel, Base):
-    __tablename__ = 'player'
-
-    # ForeignKey('room_user.id')
-    room_user_id = Column(Integer)
-    # 0 no, 1 yes
-    can_action = Column(SMALLINT)
-    card = Column(TEXT)
-    coin = Column(TEXT)
-    source = Column(Integer)
-
-
-__all__ = ['User', 'Player']
+__all__ = ['User']

@@ -69,6 +69,7 @@ class CardConst:
 
     TYPE_OPEN_CARD = '明牌'
     TYPE_DARK_CARD = '暗牌'
+    TYPE_WITHHOLDING_CARD = '玩家扣留的卡'
 
 
 class CoinConst:

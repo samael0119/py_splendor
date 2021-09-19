@@ -8,15 +8,13 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 
 from application.play import RoomPlay
-from service.game_service import CardResource, CoinResource
+from application.instruct_executor import instruct_map, instruct_executor
 from service.user_service import check_room_token_can_join
 from utils.const_utils import SystemConst, RoomConst
 
 socket_router = FastAPI()
 room_pool = {}
-instruct_map = {d: getattr(c, d).__doc__ for c in [CardResource, CoinResource]
-                for d in dir(c)
-                if not d.startswith('_') and callable(getattr(c, d))}
+
 process_pool = ThreadPoolExecutor(max_workers=4)
 
 
@@ -51,7 +49,7 @@ class ConnectionManager:
                 })
         for connection in self.active_connections[room_id].values():
             await connection.send_json(message)
-            # logger.info(message)
+            logger.debug(message)
 
 
 manager = ConnectionManager()
@@ -95,8 +93,8 @@ async def websocket_endpoint(websocket: WebSocket, room_id: int,
                 if data.get('help'):
                     await manager.send_personal_message(instruct_map, websocket)
             if data.get('game'):
-                # TODO 将玩家str指令转换为具体游戏逻辑, 如: {"instruct": "take_coin"}
-                pass
+                # 将玩家str指令转换为具体游戏逻辑, 如: {"instruct": "take_coin", "coin_list": ["红色", "蓝色", "白色"]}
+                instruct_executor.execute(room_id, data)
 
     except WebSocketDisconnect:
         manager.disconnect(room_id, client_id)
