@@ -37,13 +37,15 @@ class UserConst:
     ACTION_NO = 0
 
     ACTION_PASS = ''
-    ACTION_TACK_COIN = ''
+    ACTION_TAKE_COIN = ''
     ACTION_BUY_CARD = ''
     ACTION_SEIZURE_CARD = ''
 
 
 class RoomConst:
     ROOM_MAX_COUNT = 1
+
+    ROLE_MAX_ROUNDS = 1000
 
     PLAYER_MAX_COUNT = 4
     PLAYER_MIN_COUNT = 2
@@ -70,6 +72,12 @@ class CardConst:
     TYPE_OPEN_CARD = '明牌'
     TYPE_DARK_CARD = '暗牌'
     TYPE_WITHHOLDING_CARD = '玩家扣留的卡'
+    TYPE_BOUGHT_CARD = '玩家买了的卡'
+
+    POSITION_CARD_TABLE = 1
+    POSITION_PLAYER_HANDS = 2
+
+    ROLE_MAX_WITHHOLDING_CARD = 3
 
 
 class CoinConst:
@@ -83,10 +91,25 @@ class CoinConst:
     OBJECT = 'object'
     COUNT = 'count'
 
+    ROLE_PLAYER_MAX_COIN = 10
+    # 每次行动最大可拿不同颜色硬币数
+    ROLE_ACTION_MAX_DIFF_COIN = 3
+    # 每次行动最大可拿相同颜色硬币数
+    ROLE_ACTION_MAX_SAME_COIN = 3
+
     ROLE_PLAYER_COIN_MAP = {
         2: 4,
         3: 5,
         4: 7
+    }
+
+
+class InstructConst:
+    INSTRUCT_MAP = {
+        "buy_card": "买卡片",
+        "withhold_card": "扣卡片",
+        "take_coin": "拿硬币",
+        "pass": "跳过"
     }
 
 

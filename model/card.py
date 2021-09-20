@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer
+from sqlalchemy import Column, String, Integer, JSON
 
 from utils.mysql_utils import BaseModel, Base
 
@@ -19,7 +19,7 @@ class CardDetail(BaseModel, Base):
     card_type = Column(String(100), nullable=False)
     card_source = Column(Integer, nullable=False)
     card_color = Column(String(20), nullable=False)
-    card_price = Column(String(100), nullable=False)
+    card_price = Column(JSON, nullable=False)
 
 
 class CardRelate(BaseModel, Base):

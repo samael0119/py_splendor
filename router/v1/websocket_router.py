@@ -7,10 +7,10 @@ from fastapi import WebSocket, WebSocketDisconnect, FastAPI, Header
 from fastapi.responses import JSONResponse
 from loguru import logger
 
+from application.instruct_executor import instruct_executor
 from application.play import RoomPlay
-from application.instruct_executor import instruct_map, instruct_executor
 from service.user_service import check_room_token_can_join
-from utils.const_utils import SystemConst, RoomConst
+from utils.const_utils import SystemConst, RoomConst, InstructConst
 
 socket_router = FastAPI()
 room_pool = {}
@@ -79,7 +79,9 @@ async def websocket_endpoint(websocket: WebSocket, room_id: int,
                     await manager.broadcast({'client_id': client_id, 'say': data['say']}, room_id)
             if data.get('system'):
                 if data.get('instruct') == SystemConst.ACTION_START and user['room_owner']:
-                    if room_pool.get(room_id) not in {RoomConst.STATUS_GAMING, RoomConst.STATUS_CLOSED}:
+                    # if room_pool.get(room_id) and room_pool[room_id].status not in \
+                    #         {RoomConst.STATUS_GAMING, RoomConst.STATUS_CLOSED}:
+                    if 1:
                         rp = RoomPlay(room_id, manager.broadcast)
                         room_pool.update({room_id: rp})
                         room_pool[room_id].status = RoomConst.STATUS_GAMING
@@ -87,14 +89,17 @@ async def websocket_endpoint(websocket: WebSocket, room_id: int,
                             await manager.broadcast({'message': f'房间{room_id}开始游戏， 倒计时{i}'}, room_id)
                             await asyncio.sleep(1)
                         process_pool.submit(run, room_id)
-                    else:
-                        await manager.send_personal_message({'message': '不能重复开始游戏！！！'}, websocket)
+                    # else:
+                    #     await manager.send_personal_message({'message': '不能重复开始游戏！！！'}, websocket)
 
                 if data.get('help'):
-                    await manager.send_personal_message(instruct_map, websocket)
+                    await manager.send_personal_message(InstructConst.INSTRUCT_MAP, websocket)
             if data.get('game'):
-                # 将玩家str指令转换为具体游戏逻辑, 如: {"instruct": "take_coin", "coin_list": ["红色", "蓝色", "白色"]}
-                instruct_executor.execute(room_id, data)
+                if room_id not in room_pool or  room_pool[room_id].status != RoomConst.STATUS_GAMING:
+                    await manager.send_personal_message({"message": "游戏还没开始"}, websocket)
+                else:
+                    # 将玩家str指令转换为具体游戏逻辑, 如: {"instruct": "take_coin", "coin_color_list": ["红色", "蓝色", "白色"]}
+                    await instruct_executor.execute(room_id, user['room_user_id'], data, manager.broadcast)
 
     except WebSocketDisconnect:
         manager.disconnect(room_id, client_id)

@@ -12,7 +12,6 @@ from utils.const_utils import ServiceCode, RoomConst, UserConst
 class RoomPlay:
     status = RoomConst.STATUS_WAITING
     action_sleep = 1
-    max_rounds = 5
 
     def __init__(self, room_id, broadcast):
         self._room_id = room_id
@@ -45,6 +44,7 @@ class RoomPlay:
         self.card_resource, self.coin_resource, self.player_resource = \
             game_resource_init(self._room.card_summary_id, self._room.coin_summary_id, self._room_player_list)
         instruct_executor.init_room_resource(self._room_id, self.card_resource, self.coin_resource, self.player_resource)
+        self.stop_flag = RoomConst.ROLE_MAX_ROUNDS * len(self._room_player_list)
 
     async def runtime_process(self):
         await self._broadcast({'message': f'首位玩家座位号: {self._first_seat_num}号'}, self._room_id)
@@ -56,6 +56,8 @@ class RoomPlay:
         while True:
             action_player = self._room_player_list[action_index]
             self.player_resource.resource[action_player.id]['can_action'] = UserConst.ACTION_CAN
+            for k in self.player_resource.resource[action_player.id]['instruct_keys'].keys():
+                self.player_resource.resource[action_player.id]['instruct_keys'][k] = UserConst.ACTION_CAN
             await self._broadcast({"message": f'{action_index + 1}号座位玩家开始行动'}, self._room_id)
             # check player online
             if not self.check_user_online(action_player.id):
@@ -83,8 +85,8 @@ class RoomPlay:
             if action_index > max_index:
                 action_index = 0
 
-            self.max_rounds -= 1
-            if not self.max_rounds:
+            self.stop_flag -= 1
+            if self.stop_flag < 0:
                 await self._broadcast({"message": '超出最大回合数，游戏结束！！！'}, self._room_id)
                 break
 
