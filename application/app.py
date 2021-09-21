@@ -6,8 +6,6 @@ from uvicorn import run
 
 from router.v1.websocket_router import socket_router
 
-# 控制log级别
-os.putenv('LOGURU_LEVEL', 'INFO')
 app = FastAPI()
 base_url = '/api/v1'
 # app.add_middleware(SessionMiddleware, secret_key='py-splendor')
